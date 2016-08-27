@@ -1,12 +1,9 @@
-package br.com.iurimenin.gochat;
+package br.com.iurimenin.gochat.activities;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.annotation.TargetApi;
 import android.app.AlertDialog;
-import android.app.Dialog;
-import android.app.DialogFragment;
-import android.app.FragmentTransaction;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -25,7 +22,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.provider.ContactsContract;
 import android.text.TextUtils;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -44,6 +40,8 @@ import com.google.firebase.auth.FirebaseAuth;
 import java.util.ArrayList;
 import java.util.List;
 
+import br.com.iurimenin.gochat.R;
+
 import static android.Manifest.permission.READ_CONTACTS;
 
 /**
@@ -57,13 +55,6 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
     private static final int REQUEST_READ_CONTACTS = 0;
 
     /**
-     * A dummy authentication store containing known user names and passwords.
-     * TODO: remove after connecting to a real authentication system.
-     */
-    private static final String[] DUMMY_CREDENTIALS = new String[]{
-            "foo@example.com:hello", "bar@example.com:world"
-    };
-    /**
      * Keep track of the login task to ensure we can cancel it if requested.
      */
     private UserLoginTask mAuthTask = null;
@@ -73,6 +64,9 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
     private EditText mPasswordView;
     private View mProgressView;
     private View mLoginFormView;
+
+    // Firebase refenreces
+    FirebaseAuth fireBaseAuth;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -104,6 +98,19 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
 
         mLoginFormView = findViewById(R.id.login_form);
         mProgressView = findViewById(R.id.login_progress);
+
+        fireBaseAuth = FirebaseAuth.getInstance();
+        if (fireBaseAuth.getCurrentUser() != null) {
+
+            openChatActivity();
+        }
+    }
+
+    private void openChatActivity() {
+
+        Intent i = new Intent(LoginActivity.this, ChatActivity.class);
+        startActivity(i);
+        LoginActivity.this.finish();
     }
 
     private void populateAutoComplete() {
@@ -198,7 +205,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
             // perform the user login attempt.
             showProgress(true);
 
-            Task<AuthResult> signInTask =  FirebaseAuth.getInstance().signInWithEmailAndPassword(email, password);
+            Task<AuthResult> signInTask =  fireBaseAuth.signInWithEmailAndPassword(email, password);
 
             signInTask.addOnCompleteListener(new OnCompleteListener<AuthResult>() {
                 @Override
@@ -206,13 +213,11 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
 
                     if(task.isSuccessful()) {
 
-                        Intent i = new Intent(LoginActivity.this, ChatActivity.class);
-                        startActivity(i);
-                        LoginActivity.this.finish();
+                        openChatActivity();
 
                     } else {
 
-                        Task<AuthResult> creatUserTask =  FirebaseAuth.getInstance().createUserWithEmailAndPassword(email, password);
+                        Task<AuthResult> creatUserTask =  fireBaseAuth.createUserWithEmailAndPassword(email, password);
                         creatUserTask.addOnCompleteListener(new OnCompleteListener<AuthResult>() {
                             @Override
                             public void onComplete(@NonNull Task<AuthResult> task) {
@@ -220,12 +225,11 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
                                 showProgress(false);
                                 if (task.isSuccessful()) {
 
-                                    Intent i = new Intent(LoginActivity.this, ChatActivity.class);
-                                    startActivity(i);
-                                    LoginActivity.this.finish();
+                                    openChatActivity();
+
                                 } else {
 
-                                    exibeDialogErro(task.getException().getCause().toString());
+                                    showErrorDialog(task.getException().getCause().toString());
                                 }
                             }
                         });
@@ -235,7 +239,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
         }
     }
 
-    private void exibeDialogErro(String s) {
+    private void showErrorDialog(String s) {
         AlertDialog alertDialog = new AlertDialog.Builder(LoginActivity.this).create();
         alertDialog.setTitle("Ooops!");
         alertDialog.setMessage(s);
@@ -255,7 +259,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
 
     private boolean isPasswordValid(String password) {
         //TODO: Replace this with your own logic
-        return password.length() > 4;
+        return password.length() > 5;
     }
 
     /**
